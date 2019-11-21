@@ -5,7 +5,6 @@ import sqlite3
 
 def has_password(cwd, filename):
     directory = get_directory(cwd)
-    directory = ('\啦啦啦啦') # 这行要删掉
     conn = sqlite3.connect(os.path.join(os.getcwd(), 'server', 'passwords.db'))
     cursor = conn.cursor()
     cursor.execute(f'SELECT * FROM passwords WHERE directory = "{directory}" AND filename = "{filename}";')

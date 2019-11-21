@@ -1,0 +1,61 @@
+<!doctype html>
+{% if user_settings.username == "" %}
+    <title>PolarisHub (Flask v0.1)</title>
+{% else %}
+    <title>{{user_settings.username}}'s PolarisHub (Flask v0.1)</title>
+{% endif %}
+<link rel="stylesheet" href="/static/css/bootstrap.css">
+<link rel="stylesheet" href="/static/css/all.css">
+<link rel="icon" href="/static/favicon.ico"type=”image/x-icon”>
+<meta name="viewpoint" content="user-scalable=no, width=device-width, initial-scale=1.0">
+
+<div class="container">
+    <div class="my-5">
+    <div class="d-flex justify-content-between">
+        <div class="d-flex  align-items-end">
+        {% if user_settings.username == "" %}
+            <h1 class="mr-3">PolarisHub</h1> <p>(Flask v0.1)</p>
+        {% else %}
+            <h1 class="mr-3">{{user_settings.username}}'s PolarisHub</h1> <p> (Flask v0.1)</p>
+        {% endif %}
+        </div>
+
+        <div>
+            <a href="https://github.com/XieGuochao/polarishub_flask" target="_blank">
+                <button type="button" class="btn btn-outline-primary my-1">
+                    <i class="fab fa-github"></i> 
+                </button>
+            </a>
+            <a href="/about"> 
+                <button type="button" class="btn btn-outline-primary my-1 ml-3 mr-3">
+                    About / 关于
+                </button>
+            </a>
+            <a href="/help"> 
+                <button type="button" class="btn btn-outline-primary my-1 float-right">
+                    Help / 帮助
+                </button>
+            </a>
+        </div>
+    </div>
+    <div>
+        <form action="/qr" method = "POST">
+        <!-- <a href="/qr?filepath=/files" class="float-right"> -->
+            <input type="text" style="display: none" id="filepath" name="filepath" value="/files">
+            <button type="submit" class="btn btn-outline-primary my-1 float-right">
+                <i class="fas fa-share-alt"></i> 
+            </button>
+        <!-- </a> -->
+        </form>
+    </div>
+    </div>
+    <div>
+        <form class="form-group" action="/verify" method="POST">
+            <input type="text" name="cwd" class="form-control" style="display:none" value="{{ cwd }}">
+            <input type="text" name="filename" class="form-control" style="display:none" value="{{ dir }}">
+            <input type="text" name="password" class="form-control">
+            <button class="btn btn-outline-primary" type="submit">Submit / 提交</button>
+        </form>
+    </div>
+
+</div>

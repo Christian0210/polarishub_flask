@@ -14,6 +14,8 @@ from polarishub_flask.server import myqrcode as myqrcode
 import json
 from polarishub_flask.server import help
 
+from password import add_password, delete_password, has_password, verify_password
+
 os_name = os.name
 platform = sys.platform
 # printv("os_name:", os_name)
@@ -67,14 +69,80 @@ def create_app(test_config=None):
         printv (local_path)
         is_admin = network.checkIP(request.remote_addr)
 
-        if os.path.isfile(local_path):
-            return send_file(local_path)
-        elif os.path.isdir(local_path):
-            return render_template('index.html', cwd = local_path.replace('\\', "\\\\") if platform=="win32" else local_path, 
-                                   dirs = file_handler.get_dir(local_path), is_admin = is_admin, 
-                                   user_settings = file_handler.get_settings(), ip = network.get_host_ip())
+        if is_admin:
+            if os.path.isfile(local_path):
+                return send_file(local_path)
+            elif os.path.isdir(local_path):
+                return render_template('index.html', cwd = local_path.replace('\\', "\\\\") if platform=="win32" else local_path, 
+                                    dirs = file_handler.get_dir(local_path), is_admin = is_admin, 
+                                    user_settings = file_handler.get_settings(), ip = network.get_host_ip())
+        else:
+            if os.path.isfile(local_path):
+                filename = local_path.split('\\')[-1] # 这一行好像是依赖操作系统的
+                cwd = local_path[:-len(filename)]
+            elif os.path.isdir(local_path):
+                filename = None
+                cwd = local_path
+            if has_password(cwd, filename):
+                # verify会比index更低一个层级，需要反馈的是本事而不是子文件
+                filename = local_path.split('\\')[-2]  # 这是一行系统依赖代码
+                local_path = local_path[:-len(filename)-1]
+                local_path = local_path.replace('\\', "\\\\") if platform=="win32" else local_path
+                return render_template('verify.html', user_settings = file_handler.get_settings(), 
+                                        cwd = local_path, 
+                                        dir = filename)
+            else:
+                if os.path.isfile(local_path):
+                    return send_file(local_path)
+                elif os.path.isdir(local_path):
+                    return render_template('index.html', cwd = local_path.replace('\\', "\\\\") if platform=="win32" else local_path, 
+                                        dir = file_handler.get_dir(local_path), is_admin = is_admin, 
+                                        user_settings = file_handler.get_settings(), ip = network.get_host_ip())
+                else:
+                    abort(404)
+
+    @app.route('/verify', methods=['POST'])
+    def verify():
+        filename = request.form["filename"] # 这个filename可能是一个文件夹名
+        password = request.form["password"]
+        cwd = request.form["cwd"]
+        local_path = os.path.join(os.getcwd(), 'files', filename)
+        if os.path.isfile(os.path.join(cwd, filename)): # filename正确化，若为文件夹则为none
+            pass
+        elif os.path.isdir(os.path.join(cwd, filename)):
+            cwd = os.path.join(cwd, filename)
+            filename = None
         else:
             abort(404)
+        if verify_password(cwd, filename, password): # 这一行也是依赖操作系统的
+            return render_template('index.html', cwd = local_path.replace('\\', "\\\\") if platform=="win32" else local_path, 
+                                    dirs = file_handler.get_dir(local_path), is_admin = False, 
+                                    user_settings = file_handler.get_settings(), ip = network.get_host_ip())
+        else:
+            return "wrong password!"
+
+    @app.route('/password', methods=['POST'])
+    def password():
+        filename = request.form["filename"] # 这个filename可能是一个文件夹名
+        password = request.form["password"]
+        cwd = request.form["cwd"]
+        if os.path.isfile(os.path.join(cwd, filename)): # filename正确化，若为文件夹则为none
+            pass
+        elif os.path.isdir(os.path.join(cwd, filename)):
+            cwd = os.path.join(cwd, filename)
+            filename = None
+        else:
+            abort(404)
+        is_admin = network.checkIP(request.remote_addr)
+        if is_admin: # 判断是否为主机
+            if password == '':
+                delete_password(cwd, filename) # 如果返回密码值为空即视为删除
+            else:
+                add_password(cwd, filename, password)
+        else:
+            pass
+
+        return redirect('/files')
 
     @app.route('/opendir')
     def opendir():
@@ -145,5 +213,11 @@ def create_app(test_config=None):
     def help_page():
         return redirect('/static/help.html')
         # return render_template('help.html', help_content = help.help_content)
+
+    
+    @app.errorhandler(404)
+    def miss(e):
+        return request.url, 404
+
 
     return app
